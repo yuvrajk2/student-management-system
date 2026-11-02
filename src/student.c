@@ -94,10 +94,12 @@ int parseCSVRow(const char *line, Student *out) {
         if (ch == '"') {
             in_quotes = !in_quotes;
         } else if (ch == ',' && !in_quotes) {
+            /* A valid row has at most 8 fields (7 commas). Reject anything
+             * longer instead of writing past the end of fields[]. */
+            if (f_idx >= 7) return 0;
             fields[f_idx][c_idx] = '\0';
             f_idx++;
             c_idx = 0;
-            if (f_idx >= 8) break;
         } else {
             if (c_idx < 127) {
                 fields[f_idx][c_idx++] = ch;

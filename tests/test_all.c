@@ -116,6 +116,10 @@ static void test_csv_parser_malformed(void) {
     const char *bad_line = "not,enough,fields";
     Student s;
     TEST_ASSERT(parseCSVRow(bad_line, &s) == 0, "CSV parser rejects malformed row");
+
+    /* Regression: 9+ fields used to write past the end of the fields[] buffer */
+    const char *too_many = "1,Ann,20,CS,3.50,a@b.c,123,2022,extra";
+    TEST_ASSERT(parseCSVRow(too_many, &s) == 0, "CSV parser rejects rows with more than 8 fields");
 }
 
 /* ── Main Runner ─────────────────────────────────────────── */
