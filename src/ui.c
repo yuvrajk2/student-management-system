@@ -75,12 +75,21 @@ void flushStdin(void) {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
+/* stdin was closed (Ctrl+D / Ctrl+Z / piped input ran out): exit cleanly
+ * instead of re-prompting forever. */
+static void exitOnEOF(void) {
+    printf("\n\n  " C_DIM "Input closed. Goodbye." C_RESET "\n\n");
+    exit(0);
+}
+
 int readInt(const char *prompt, int min, int max) {
     int val;
     while (1) {
         printf("  %s", prompt);
         fflush(stdout);
-        if (scanf("%d", &val) == 1) {
+        int rc = scanf("%d", &val);
+        if (rc == EOF) exitOnEOF();
+        if (rc == 1) {
             flushStdin();
             if (val >= min && val <= max) return val;
             printf("  " C_YELLOW "  Enter a value between %d and %d.\n" C_RESET, min, max);
@@ -96,7 +105,9 @@ float readFloat(const char *prompt, float min, float max) {
     while (1) {
         printf("  %s", prompt);
         fflush(stdout);
-        if (scanf("%f", &val) == 1) {
+        int rc = scanf("%f", &val);
+        if (rc == EOF) exitOnEOF();
+        if (rc == 1) {
             flushStdin();
             if (val >= min && val <= max) return val;
             printf("  " C_YELLOW "  Enter a value between %.2f and %.2f.\n" C_RESET, min, max);
@@ -111,10 +122,9 @@ void readString(const char *prompt, char *buf, int maxlen) {
     while (1) {
         printf("  %s", prompt);
         fflush(stdout);
-        if (fgets(buf, maxlen, stdin)) {
-            buf[strcspn(buf, "\n")] = '\0';
-            if (strlen(buf) > 0) return;
-        }
+        if (!fgets(buf, maxlen, stdin)) exitOnEOF();
+        buf[strcspn(buf, "\n")] = '\0';
+        if (strlen(buf) > 0) return;
         printf("  " C_YELLOW "  Field cannot be empty.\n" C_RESET);
     }
 }
