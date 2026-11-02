@@ -119,7 +119,11 @@ int main(void) {
             fflush(stdout);
 
             char line[16];
-            if (!fgets(line, sizeof(line), stdin)) continue;
+            if (!fgets(line, sizeof(line), stdin)) {
+                /* EOF on stdin (Ctrl+D): quit instead of spinning forever */
+                printf("\n\n  " C_DIM "Input closed. Goodbye." C_RESET "\n\n");
+                return 0;
+            }
 
             /* Handle Q/q for quit */
             if (tolower((unsigned char)line[0]) == 'q') {
