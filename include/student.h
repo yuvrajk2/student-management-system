@@ -49,6 +49,7 @@ void courseRoster   (void);   /* all students in a given course */
 /* Validation & Parsing (callable by test suite & feature code) */
 int  validateStudent(const Student *s, char *err_msg, size_t err_size);
 int  parseCSVRow    (const char *line, Student *out);
+int  isCSVHeader     (const char *line);   /* "ID,..." / "Name,..." header row */
 
 /* Utilities */
 int   countStudents(void);

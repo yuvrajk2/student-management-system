@@ -100,6 +100,23 @@ int validateStudent(const Student *s, char *err_msg, size_t err_size) {
     return 1;
 }
 
+/* True if the line is the exported header row ("ID,..." or "Name,...").
+ * Compares the leading field only, so a student called "David" or a row
+ * containing "id" somewhere is not mistaken for a header. */
+int isCSVHeader(const char *line) {
+    static const char *heads[] = { "ID,", "Name," };
+    if (!line) return 0;
+    for (size_t h = 0; h < sizeof(heads) / sizeof(heads[0]); h++) {
+        size_t n = strlen(heads[h]);
+        size_t i = 0;
+        while (i < n && line[i] &&
+               tolower((unsigned char)line[i]) == tolower((unsigned char)heads[h][i]))
+            i++;
+        if (i == n) return 1;
+    }
+    return 0;
+}
+
 int parseCSVRow(const char *line, Student *out) {
     if (!line || !out) return 0;
     memset(out, 0, sizeof(Student));
@@ -719,7 +736,7 @@ void importCSV(void) {
     printHLine(BOX_BL, BOX_H, BOX_BR);
     printf("\n");
 
-    char path[128];
+    char path[128] = "";   /* readStringOpt leaves this untouched on empty input */
     readStringOpt("CSV file path (press Enter for 'students_export.csv'): ", path, sizeof(path));
     if (strlen(path) == 0) strncpy(path, "students_export.csv", sizeof(path) - 1);
 
@@ -750,7 +767,7 @@ void importCSV(void) {
 
     while (fgets(line, sizeof(line), f)) {
         line_num++;
-        if (line_num == 1 && (containsCI(line, "ID") || containsCI(line, "Name"))) {
+        if (line_num == 1 && isCSVHeader(line)) {
             continue;
         }
         if (line[0] == '\r' || line[0] == '\n' || line[0] == '\0') continue;
