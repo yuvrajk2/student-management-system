@@ -112,6 +112,17 @@ static void test_csv_parser_valid_quoted(void) {
     TEST_ASSERT(s.year == 2022, "CSV parser correctly extracted year");
 }
 
+static void test_csv_header_detection(void) {
+    TEST_ASSERT(isCSVHeader("ID,Name,Age,Course,GPA,Email,Phone,EnrollmentYear\n") == 1,
+                "Exported header row is detected");
+    TEST_ASSERT(isCSVHeader("name,age,course,gpa,email,phone,year") == 1,
+                "Header without ID column is detected (case-insensitive)");
+    TEST_ASSERT(isCSVHeader("David,20,CS,3.5,d@x.com,123,2022") == 0,
+                "Data row for a student named David is not a header");
+    TEST_ASSERT(isCSVHeader("7,Ida,20,Video Editing,3.5,i@x.com,123,2022") == 0,
+                "Data row containing 'id' is not a header");
+}
+
 static void test_csv_parser_malformed(void) {
     const char *bad_line = "not,enough,fields";
     Student s;
@@ -143,6 +154,9 @@ int main(void) {
 
     printf("\n--- [3] GPA Grading & Metrics Tests ---\n");
     test_gpa_grades();
+
+    printf("\n--- [3b] CSV Import Header Tests ---\n");
+    test_csv_header_detection();
 
     printf("\n--- [4] CSV Parser Tests ---\n");
     test_csv_parser_valid_quoted();
