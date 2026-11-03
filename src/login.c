@@ -5,6 +5,9 @@
  * Password storage: admin.cfg ($sha256$<salt>$<hash>).
  * Transparently upgrades legacy plaintext passwords to salted SHA-256 hashes.
  */
+#ifdef _WIN32
+#define _CRT_RAND_S   /* enables rand_s() in <stdlib.h> */
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,12 +30,39 @@
 
 /* ── Salt & Hash Helpers ─────────────────────────────────── */
 
+/* Fill buf with n bytes from the operating system's random source. */
+static int osRandomBytes(unsigned char *buf, size_t n) {
+#ifdef _WIN32
+    for (size_t i = 0; i < n; i++) {
+        unsigned int v;
+        if (rand_s(&v) != 0) return 0;
+        buf[i] = (unsigned char)(v & 0xFF);
+    }
+    return 1;
+#else
+    FILE *f = fopen("/dev/urandom", "rb");
+    if (!f) return 0;
+    size_t got = fread(buf, 1, n, f);
+    fclose(f);
+    return got == n;
+#endif
+}
+
+/* Salts must be unpredictable and differ between runs. rand() seeded with
+ * time() repeats whenever two salts are generated in the same second, so use
+ * the OS random source and only fall back to rand() if that is unavailable. */
 static void generateSalt(char *salt, int len) {
     static const char hex[] = "0123456789abcdef";
-    static int seeded = 0;
-    if (!seeded) { srand((unsigned)time(NULL)); seeded = 1; }
+    unsigned char rnd[64];
+    int have_os = (len > 0 && (size_t)len <= sizeof(rnd)) && osRandomBytes(rnd, (size_t)len);
+
+    if (!have_os) {
+        static int seeded = 0;
+        if (!seeded) { srand((unsigned)time(NULL) ^ (unsigned)clock()); seeded = 1; }
+    }
     for (int i = 0; i < len; i++) {
-        salt[i] = hex[rand() % 16];
+        unsigned v = have_os ? rnd[i] : (unsigned)rand();
+        salt[i] = hex[v % 16];
     }
     salt[len] = '\0';
 }
