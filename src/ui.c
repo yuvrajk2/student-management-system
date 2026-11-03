@@ -70,10 +70,6 @@ void printInfo(const char *msg) {
 
 /* ── Input helpers ───────────────────────────────────────── */
 
-void flushStdin(void) {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
 
 /* stdin was closed (Ctrl+D / Ctrl+Z / piped input ran out): exit cleanly
  * instead of re-prompting forever. */
@@ -90,11 +86,11 @@ int readInt(const char *prompt, int min, int max) {
         int rc = scanf("%d", &val);
         if (rc == EOF) exitOnEOF();
         if (rc == 1) {
-            flushStdin();
+            flushInput();
             if (val >= min && val <= max) return val;
             printf("  " C_YELLOW "  Enter a value between %d and %d.\n" C_RESET, min, max);
         } else {
-            flushStdin();
+            flushInput();
             printf("  " C_YELLOW "  Invalid input — numbers only.\n" C_RESET);
         }
     }
@@ -108,22 +104,40 @@ float readFloat(const char *prompt, float min, float max) {
         int rc = scanf("%f", &val);
         if (rc == EOF) exitOnEOF();
         if (rc == 1) {
-            flushStdin();
+            flushInput();
             if (val >= min && val <= max) return val;
             printf("  " C_YELLOW "  Enter a value between %.2f and %.2f.\n" C_RESET, min, max);
         } else {
-            flushStdin();
+            flushInput();
             printf("  " C_YELLOW "  Invalid input — number required.\n" C_RESET);
         }
     }
+}
+
+/* Read one line into buf (at most maxlen-1 chars, newline stripped).
+ * If the user typed more than fits, the rest of the line is discarded so it
+ * does not leak into the next prompt, and the input is reported as shortened.
+ * Returns 0 on EOF, 1 otherwise. */
+static int readLine(char *buf, int maxlen) {
+    if (!fgets(buf, maxlen, stdin)) return 0;
+    char *nl = strchr(buf, '\n');
+    if (nl) {
+        *nl = '\0';
+    } else {
+        int c = getchar();
+        if (c != '\n' && c != EOF) {
+            flushInput();
+            printf("  " C_YELLOW "  Input too long - shortened to %d characters.\n" C_RESET, maxlen - 1);
+        }
+    }
+    return 1;
 }
 
 void readString(const char *prompt, char *buf, int maxlen) {
     while (1) {
         printf("  %s", prompt);
         fflush(stdout);
-        if (!fgets(buf, maxlen, stdin)) exitOnEOF();
-        buf[strcspn(buf, "\n")] = '\0';
+        if (!readLine(buf, maxlen)) exitOnEOF();
         if (strlen(buf) > 0) return;
         printf("  " C_YELLOW "  Field cannot be empty.\n" C_RESET);
     }
@@ -133,8 +147,7 @@ void readStringOpt(const char *prompt, char *buf, int maxlen) {
     char tmp[256] = {0};
     printf("  %s", prompt);
     fflush(stdout);
-    if (fgets(tmp, sizeof(tmp), stdin)) {
-        tmp[strcspn(tmp, "\n")] = '\0';
+    if (readLine(tmp, sizeof(tmp))) {
         if (strlen(tmp) > 0) {
             strncpy(buf, tmp, maxlen - 1);
             buf[maxlen - 1] = '\0';
