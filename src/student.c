@@ -128,7 +128,13 @@ int parseCSVRow(const char *line, Student *out) {
     for (int i = 0; line[i] && line[i] != '\r' && line[i] != '\n'; i++) {
         char ch = line[i];
         if (ch == '"') {
-            in_quotes = !in_quotes;
+            if (in_quotes && line[i + 1] == '"') {
+                /* RFC 4180: "" inside a quoted field is a literal quote */
+                if (c_idx < 127) fields[f_idx][c_idx++] = '"';
+                i++;
+            } else {
+                in_quotes = !in_quotes;
+            }
         } else if (ch == ',' && !in_quotes) {
             /* A valid row has at most 8 fields (7 commas). Reject anything
              * longer instead of writing past the end of fields[]. */
@@ -165,6 +171,16 @@ int parseCSVRow(const char *line, Student *out) {
     out->year = atoi(fields[offset + 6]);
 
     return validateStudent(out, NULL, 0);
+}
+
+/* Write one CSV field in quotes, doubling any embedded quote (RFC 4180) */
+static void writeCSVField(FILE *f, const char *text) {
+    fputc('"', f);
+    for (; *text; text++) {
+        if (*text == '"') fputc('"', f);
+        fputc(*text, f);
+    }
+    fputc('"', f);
 }
 
 /* ── Sort comparators ────────────────────────────────────── */
@@ -708,9 +724,15 @@ void exportCSV(void) {
     fprintf(f, "ID,Name,Age,Course,GPA,Email,Phone,EnrollmentYear\n");
     for (int i = 0; i < n; i++) {
         Student *s = &arr[i];
-        fprintf(f, "%d,\"%s\",%d,\"%s\",%.2f,\"%s\",\"%s\",%d\n",
-                s->id, s->name, s->age, s->course,
-                s->gpa, s->email, s->phone, s->year);
+        fprintf(f, "%d,", s->id);
+        writeCSVField(f, s->name);
+        fprintf(f, ",%d,", s->age);
+        writeCSVField(f, s->course);
+        fprintf(f, ",%.2f,", s->gpa);
+        writeCSVField(f, s->email);
+        fputc(',', f);
+        writeCSVField(f, s->phone);
+        fprintf(f, ",%d\n", s->year);
     }
     fclose(f);
     free(arr);

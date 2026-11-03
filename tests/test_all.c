@@ -133,6 +133,14 @@ static void test_csv_parser_malformed(void) {
     TEST_ASSERT(parseCSVRow(too_many, &s) == 0, "CSV parser rejects rows with more than 8 fields");
 }
 
+static void test_csv_parser_escaped_quotes(void) {
+    const char *line = "1,\"Ann \"\"AJ\"\" Lee\",20,\"CS, Hons\",3.50,\"a@b.c\",\"123\",2022";
+    Student s;
+    TEST_ASSERT(parseCSVRow(line, &s) == 1, "CSV parser accepts row with escaped quotes");
+    TEST_ASSERT(strcmp(s.name, "Ann \"AJ\" Lee") == 0, "CSV parser unescapes doubled quotes in name");
+    TEST_ASSERT(strcmp(s.course, "CS, Hons") == 0, "CSV parser keeps comma inside quoted course");
+}
+
 /* ── Main Runner ─────────────────────────────────────────── */
 
 int main(void) {
@@ -161,6 +169,7 @@ int main(void) {
     printf("\n--- [4] CSV Parser Tests ---\n");
     test_csv_parser_valid_quoted();
     test_csv_parser_malformed();
+    test_csv_parser_escaped_quotes();
 
     printf("\n--------------------------------------------------\n");
     printf("RESULTS: %d / %d tests passed (%.1f%%)\n",
