@@ -1,11 +1,14 @@
 # Compiled binaries
 student_mgmt
 student_mgmt.exe
+test_runner
+test_runner.exe
 *.out
 *.app
 
 # Object files and libraries
 *.o
+*.d
 *.obj
 *.a
 *.lib

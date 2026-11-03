@@ -1,6 +1,6 @@
 # Student Management System - Makefile
 CC ?= gcc
-CFLAGS ?= -Wall -Wextra -std=c99 -Iinclude
+CFLAGS ?= -Wall -Wextra -std=c99 -Iinclude -MMD -MP
 
 SRCS = src/main.c src/login.c src/student.c src/ui.c src/backup.c src/sha256.c
 OBJS = $(SRCS:.c=.o)
@@ -47,6 +47,12 @@ else
 endif
 
 clean:
-	$(RM) $(TARGET) $(TEST_TARGET) src\*.o src/*.o 2>nul || true
-	$(RM) students.dat admin.cfg students_export.csv 2>nul || true
-	$(RMDIR) backups 2>nul || true
+ifeq ($(OS),Windows_NT)
+	-$(RM) $(TARGET) $(TEST_TARGET) test_runner.d src\*.o src\*.d students.dat admin.cfg students_export.csv 2>nul
+	-$(RMDIR) backups 2>nul
+else
+	$(RM) $(TARGET) $(TEST_TARGET) test_runner.d src/*.o src/*.d students.dat admin.cfg students_export.csv
+	$(RMDIR) backups
+endif
+
+-include $(OBJS:.o=.d)

@@ -42,7 +42,7 @@ gcc -Wall -Wextra -std=c99 -Iinclude (Get-Item src/*.c) -o student_mgmt.exe
 
 **Windows cmd.exe:**
 ```cmd
-gcc -Wall -Wextra -std=c99 -Iinclude src\main.c src\login.c src\student.c src\ui.c src\backup.c -o student_mgmt.exe
+gcc -Wall -Wextra -std=c99 -Iinclude src\main.c src\login.c src\student.c src\ui.c src\backup.c src\sha256.c -o student_mgmt.exe
 student_mgmt.exe
 ```
 
