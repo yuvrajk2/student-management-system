@@ -6,6 +6,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "student.h"
 #include "ui.h"
 
@@ -21,16 +24,32 @@ static int loadAll(Student **out) {
     if (n == 0) { fclose(f); *out = NULL; return 0; }
     *out = malloc(n * sizeof(Student));
     if (!*out) { fclose(f); return 0; }
-    fread(*out, sizeof(Student), n, f);
+    size_t got = fread(*out, sizeof(Student), n, f);
     fclose(f);
-    return n;
+    return (int)got;   /* a short read (truncated/corrupt file) keeps only whole records read */
 }
 
+/* Write to a temporary file first and only replace students.dat once the
+ * whole write succeeded, so a crash, full disk or write error can no longer
+ * wipe out the existing records. */
 static int saveAll(Student *arr, int n) {
-    FILE *f = fopen(DATA_FILE, "wb");
+    const char *tmp_path = DATA_FILE ".tmp";
+    FILE *f = fopen(tmp_path, "wb");
     if (!f) return 0;
-    fwrite(arr, sizeof(Student), n, f);
-    fclose(f);
+
+    int ok = (n <= 0) || fwrite(arr, sizeof(Student), n, f) == (size_t)n;
+    if (fclose(f) != 0) ok = 0;
+    if (!ok) { remove(tmp_path); return 0; }
+
+#ifdef _WIN32
+    /* rename() refuses to overwrite an existing file on Windows */
+    if (!MoveFileExA(tmp_path, DATA_FILE, MOVEFILE_REPLACE_EXISTING)) {
+        remove(tmp_path);
+        return 0;
+    }
+#else
+    if (rename(tmp_path, DATA_FILE) != 0) { remove(tmp_path); return 0; }
+#endif
     return 1;
 }
 
